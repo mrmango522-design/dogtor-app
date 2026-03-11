@@ -17,7 +17,7 @@
 
         body {
             font-family: 'Helvetica Neue', Arial, sans-serif;
-            background-color: #f0f0f0; /* 外圍背景 */
+            background-color: #f0f0f0; 
             margin: 0;
             display: flex;
             justify-content: center;
@@ -26,7 +26,7 @@
         /* 模擬手機介面 */
         .app-container {
             width: 100%;
-            max-width: 414px; /* 手機寬度 */
+            max-width: 414px; 
             min-height: 100vh;
             background-color: var(--bg-color);
             box-shadow: 0 0 20px rgba(0,0,0,0.1);
@@ -51,11 +51,12 @@
             margin-bottom: 25px;
         }
 
+        /* === 更新：Icon 圖像放大，闊度與咭片相同 === */
         .profile-pic {
-            width: 120px;
-            height: 120px;
-            border-radius: 50%;
-            object-fit: cover;
+            width: 100%; /* 填滿父容器寬度，與卡片同寬 */
+            height: 200px; /* 設定一個合適的高度，如同 Banner */
+            border-radius: 20px; /* 改為與卡片一致的圓角，不再是圓形 */
+            object-fit: cover; /* 確保圖片縮放時不變形，並裁切合適區域 */
             border: 4px solid #FFF;
             box-shadow: 0 4px 10px rgba(0,0,0,0.1);
             margin-bottom: 15px;
@@ -155,7 +156,7 @@
     <h1>🐾 皮蛋 🐾</h1>
     
     <div class="profile-section">
-        <img src="pd.png" alt="皮蛋" class="profile-pic" onerror="this.src='https://via.placeholder.com/120?text=🐶';">
+        <img src="pd.png" alt="皮蛋" class="profile-pic" onerror="this.src='https://via.placeholder.com/400x200?text=🐶';">
     </div>
 
     <div class="card" id="info-card">
@@ -241,7 +242,7 @@
         }
     }
 
-    // 取得 Google Sheet 資料 (使用 Google Viz API 轉 CSV)
+    // 取得 Google Sheet 資料
     function fetchSheetData(sheetName) {
         return new Promise((resolve, reject) => {
             const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
@@ -261,33 +262,29 @@
 
     // 渲染基本資訊卡片
     function renderInfoCard() {
-        // 1. 取得上次進食時間 (假設工作表1按時間順序，或尋找最新日期)
         let lastMealStr = "無紀錄";
         if (dataSheet1.length > 0) {
-            const lastMeal = dataSheet1[dataSheet1.length - 1]; // 假設最新紀錄在最後，若在最前請改為 [0]
+            const lastMeal = dataSheet1[dataSheet1.length - 1];
             const keys = Object.keys(lastMeal);
             lastMealStr = `${lastMeal[keys[0]]} ${lastMeal[keys[1]]}`; 
         }
 
-        // 2. 取得上次逛街資訊 (工作表3)
         let lastWalkDate = "無紀錄";
         let lastWalkDuration = "0 分鐘";
         
         if (dataSheet3.length > 0) {
-            // 將資料按日期分組來計算時間
             const walkSessions = {};
             dataSheet3.forEach(row => {
                 const keys = Object.keys(row);
                 const date = row[keys[0]];
                 const time = row[keys[1]];
-                const action = row[keys[2]]; // 開始 or 結束
+                const action = row[keys[2]];
                 
                 if(!walkSessions[date]) walkSessions[date] = {};
                 if(action && action.includes('開始')) walkSessions[date].start = time;
-                if(action && action.includes('結束')) walkSessions[date].end = time;
+                if(action && action.includes('停止')) walkSessions[date].end = time; // 保持修正為「停止」
             });
 
-            // 取得最後一個有紀錄的日期
             const dates = Object.keys(walkSessions).sort();
             if (dates.length > 0) {
                 lastWalkDate = dates[dates.length - 1];
@@ -312,7 +309,7 @@
             </div>
             <div class="info-row">
                 <span class="info-label">性別</span>
-                <span class="info-value">女 ♀️</span>
+                <span class="info-value">女</span>
             </div>
             <div class="info-row">
                 <span class="info-label">上次進食</span>
@@ -361,12 +358,10 @@
             foodCounts[food] = (foodCounts[food] || 0) + 1;
         });
 
-        // 計算平均
-        const daysCount = uniqueDays.size > 0 ? uniqueDays.size : 1; // 避免除以0
+        const daysCount = uniqueDays.size > 0 ? uniqueDays.size : 1; 
         const avgCal = filteredData.length === 0 ? 0 : Math.round(totalCalories / daysCount);
         document.getElementById('avg-calories').innerText = avgCal;
 
-        // 繪製圓形圖
         const ctx = document.getElementById('dietChart').getContext('2d');
         if (dietChartInstance) dietChartInstance.destroy();
 
@@ -393,7 +388,6 @@
     function updateWalk() {
         const days = parseInt(document.getElementById('walk-filter').value);
         
-        // 處理地面類型 (工作表2)
         const filteredGround = filterDataByDays(dataSheet2, 0, days);
         const groundCounts = {};
         filteredGround.forEach(row => {
@@ -402,7 +396,6 @@
             if(ground) groundCounts[ground] = (groundCounts[ground] || 0) + 1;
         });
 
-        // 處理散步時間 (工作表3)
         const filteredTime = filterDataByDays(dataSheet3, 0, days);
         const walkSessions = {};
         filteredTime.forEach(row => {
@@ -416,11 +409,11 @@
             if(action && action.includes('開始')) {
                 walkSessions[date].start = time;
             }
-            if(action && action.includes('結束') && walkSessions[date].start) {
+            if(action && action.includes('停止') && walkSessions[date].start) { // 保持修正為「停止」
                 const startTime = new Date(`1970/01/01 ${walkSessions[date].start}`);
                 const endTime = new Date(`1970/01/01 ${time}`);
                 walkSessions[date].duration += Math.round((endTime - startTime) / 60000);
-                walkSessions[date].start = null; // 重置以防同一天有多次散步
+                walkSessions[date].start = null; 
             }
         });
 
@@ -436,7 +429,6 @@
         const avgWalk = walkDaysCount > 0 ? Math.round(totalWalkTime / walkDaysCount) : 0;
         document.getElementById('avg-walk-time').innerText = avgWalk;
 
-        // 繪製橫向長條圖
         const ctx = document.getElementById('walkChart').getContext('2d');
         if (walkChartInstance) walkChartInstance.destroy();
 
@@ -452,7 +444,7 @@
                 }]
             },
             options: {
-                indexAxis: 'y', // 打橫
+                indexAxis: 'y',
                 responsive: true,
                 plugins: {
                     legend: { display: false }
