@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>皮蛋的日常 🐾</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #FFF5E4;
+            --card-bg: #FFFFFF;
+            --primary-color: #FF9494;
+            --text-main: #5C4B51;
+            --text-sub: #8C7A80;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f0f0f0; /* 外圍背景 */
+            margin: 0;
+            display: flex;
+            justify-content: center;
+        }
+
+        /* 模擬手機介面 */
+        .app-container {
+            width: 100%;
+            max-width: 414px; /* 手機寬度 */
+            min-height: 100vh;
+            background-color: var(--bg-color);
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            padding: 20px;
+            box-sizing: border-box;
+            color: var(--text-main);
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--primary-color);
+            margin-top: 10px;
+            margin-bottom: 20px;
+            font-size: 28px;
+            letter-spacing: 2px;
+        }
+
+        .profile-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+
+        .profile-pic {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 4px solid #FFF;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(255, 148, 148, 0.15);
+        }
+
+        .card h2 {
+            margin-top: 0;
+            font-size: 18px;
+            color: var(--primary-color);
+            border-bottom: 2px dashed #FFE3E1;
+            padding-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 15px;
+        }
+
+        .info-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .info-label {
+            color: var(--text-sub);
+            font-weight: bold;
+        }
+
+        .info-value {
+            font-weight: 500;
+        }
+
+        select {
+            padding: 5px 10px;
+            border-radius: 15px;
+            border: 1px solid var(--primary-color);
+            color: var(--text-main);
+            background: #FFF;
+            outline: none;
+            font-size: 14px;
+        }
+
+        .analysis-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 15px;
+        }
+
+        .chart-container {
+            width: 55%;
+            position: relative;
+        }
+
+        .stats-container {
+            width: 40%;
+            text-align: center;
+            background: #FFF5E4;
+            padding: 15px 5px;
+            border-radius: 15px;
+        }
+
+        .stats-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin: 5px 0;
+        }
+
+        .stats-label {
+            font-size: 12px;
+            color: var(--text-sub);
+        }
+
+        .loading {
+            text-align: center;
+            color: var(--text-sub);
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <h1>🐾 皮蛋 🐾</h1>
+    
+    <div class="profile-section">
+        <img src="pd.png" alt="皮蛋" class="profile-pic" onerror="this.src='https://via.placeholder.com/120?text=🐶';">
+    </div>
+
+    <div class="card" id="info-card">
+        <h2>基本資訊</h2>
+        <div class="loading">載入資料中...</div>
+    </div>
+
+    <div class="card">
+        <h2>
+            飲食分析
+            <select id="diet-filter" onchange="updateDiet()">
+                <option value="1">一日</option>
+                <option value="7" selected>一星期</option>
+                <option value="30">一個月</option>
+                <option value="180">半年</option>
+                <option value="365">一年</option>
+            </select>
+        </h2>
+        <div class="analysis-content">
+            <div class="chart-container">
+                <canvas id="dietChart"></canvas>
+            </div>
+            <div class="stats-container">
+                <div class="stats-label">每日平均</div>
+                <div class="stats-value" id="avg-calories">--</div>
+                <div class="stats-label">卡路里 (kcal)</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>
+            散步分析
+            <select id="walk-filter" onchange="updateWalk()">
+                <option value="1">一日</option>
+                <option value="7" selected>一星期</option>
+                <option value="30">一個月</option>
+                <option value="180">半年</option>
+                <option value="365">一年</option>
+            </select>
+        </h2>
+        <div class="analysis-content">
+            <div class="chart-container">
+                <canvas id="walkChart"></canvas>
+            </div>
+            <div class="stats-container">
+                <div class="stats-label">每日平均</div>
+                <div class="stats-value" id="avg-walk-time">--</div>
+                <div class="stats-label">分鐘</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Google Sheet ID
+    const SHEET_ID = '19l6S9XIiOi4t3JGc2DgzLErUXucYFEpqAF863yymtRg';
+    
+    // 儲存全域資料
+    let dataSheet1 = []; // 飲食
+    let dataSheet2 = []; // 散步地面
+    let dataSheet3 = []; // 散步時間
+    
+    let dietChartInstance = null;
+    let walkChartInstance = null;
+
+    // 共用顏色
+    const chartColors = ['#FF9494', '#FFD1D1', '#FFE3E1', '#FFB4B4', '#FFC9C9'];
+
+    // 初始化載入
+    async function init() {
+        try {
+            dataSheet1 = await fetchSheetData('工作表1');
+            dataSheet2 = await fetchSheetData('工作表2');
+            dataSheet3 = await fetchSheetData('工作表3');
+
+            renderInfoCard();
+            updateDiet();
+            updateWalk();
+        } catch (error) {
+            console.error("載入資料失敗:", error);
+            document.getElementById('info-card').innerHTML = `<h2 style="color:red;">資料載入失敗</h2><p>請確認 Google Sheet 已設定為「知道連結的人均可查看」。</p>`;
+        }
+    }
+
+    // 取得 Google Sheet 資料 (使用 Google Viz API 轉 CSV)
+    function fetchSheetData(sheetName) {
+        return new Promise((resolve, reject) => {
+            const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
+            Papa.parse(url, {
+                download: true,
+                header: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    resolve(results.data);
+                },
+                error: function(err) {
+                    reject(err);
+                }
+            });
+        });
+    }
+
+    // 渲染基本資訊卡片
+    function renderInfoCard() {
+        // 1. 取得上次進食時間 (假設工作表1按時間順序，或尋找最新日期)
+        let lastMealStr = "無紀錄";
+        if (dataSheet1.length > 0) {
+            const lastMeal = dataSheet1[dataSheet1.length - 1]; // 假設最新紀錄在最後，若在最前請改為 [0]
+            const keys = Object.keys(lastMeal);
+            lastMealStr = `${lastMeal[keys[0]]} ${lastMeal[keys[1]]}`; 
+        }
+
+        // 2. 取得上次逛街資訊 (工作表3)
+        let lastWalkDate = "無紀錄";
+        let lastWalkDuration = "0 分鐘";
+        
+        if (dataSheet3.length > 0) {
+            // 將資料按日期分組來計算時間
+            const walkSessions = {};
+            dataSheet3.forEach(row => {
+                const keys = Object.keys(row);
+                const date = row[keys[0]];
+                const time = row[keys[1]];
+                const action = row[keys[2]]; // 開始 or 結束
+                
+                if(!walkSessions[date]) walkSessions[date] = {};
+                if(action && action.includes('開始')) walkSessions[date].start = time;
+                if(action && action.includes('結束')) walkSessions[date].end = time;
+            });
+
+            // 取得最後一個有紀錄的日期
+            const dates = Object.keys(walkSessions).sort();
+            if (dates.length > 0) {
+                lastWalkDate = dates[dates.length - 1];
+                const session = walkSessions[lastWalkDate];
+                
+                if (session.start && session.end) {
+                    const startTime = new Date(`1970/01/01 ${session.start}`);
+                    const endTime = new Date(`1970/01/01 ${session.end}`);
+                    const diffMins = Math.round((endTime - startTime) / 60000);
+                    lastWalkDuration = `${diffMins} 分鐘`;
+                } else {
+                    lastWalkDuration = "紀錄不完整";
+                }
+            }
+        }
+
+        const html = `
+            <h2>基本資訊</h2>
+            <div class="info-row">
+                <span class="info-label">名字</span>
+                <span class="info-value">皮蛋</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">性別</span>
+                <span class="info-value">女 ♀️</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">上次進食</span>
+                <span class="info-value">${lastMealStr}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">上次散步日期</span>
+                <span class="info-value">${lastWalkDate}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">上次散步時長</span>
+                <span class="info-value">${lastWalkDuration}</span>
+            </div>
+        `;
+        document.getElementById('info-card').innerHTML = html;
+    }
+
+    // 過濾日期工具函數
+    function filterDataByDays(data, dateKeyIndex, days) {
+        const now = new Date();
+        return data.filter(row => {
+            const keys = Object.keys(row);
+            const rowDate = new Date(row[keys[dateKeyIndex]]);
+            const diffDays = (now - rowDate) / (1000 * 60 * 60 * 24);
+            return diffDays <= days;
+        });
+    }
+
+    // 更新飲食分析
+    function updateDiet() {
+        const days = parseInt(document.getElementById('diet-filter').value);
+        const filteredData = filterDataByDays(dataSheet1, 0, days);
+
+        let totalCalories = 0;
+        const foodCounts = {};
+        const uniqueDays = new Set();
+
+        filteredData.forEach(row => {
+            const keys = Object.keys(row);
+            const date = row[keys[0]];
+            const food = row[keys[2]];
+            const cal = parseFloat(row[keys[3]]) || 0;
+
+            uniqueDays.add(date);
+            totalCalories += cal;
+            foodCounts[food] = (foodCounts[food] || 0) + 1;
+        });
+
+        // 計算平均
+        const daysCount = uniqueDays.size > 0 ? uniqueDays.size : 1; // 避免除以0
+        const avgCal = filteredData.length === 0 ? 0 : Math.round(totalCalories / daysCount);
+        document.getElementById('avg-calories').innerText = avgCal;
+
+        // 繪製圓形圖
+        const ctx = document.getElementById('dietChart').getContext('2d');
+        if (dietChartInstance) dietChartInstance.destroy();
+
+        dietChartInstance = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: Object.keys(foodCounts),
+                datasets: [{
+                    data: Object.values(foodCounts),
+                    backgroundColor: chartColors,
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'bottom', labels: { boxWidth: 10, font: {size: 10} } }
+                }
+            }
+        });
+    }
+
+    // 更新散步分析
+    function updateWalk() {
+        const days = parseInt(document.getElementById('walk-filter').value);
+        
+        // 處理地面類型 (工作表2)
+        const filteredGround = filterDataByDays(dataSheet2, 0, days);
+        const groundCounts = {};
+        filteredGround.forEach(row => {
+            const keys = Object.keys(row);
+            const ground = row[keys[2]];
+            if(ground) groundCounts[ground] = (groundCounts[ground] || 0) + 1;
+        });
+
+        // 處理散步時間 (工作表3)
+        const filteredTime = filterDataByDays(dataSheet3, 0, days);
+        const walkSessions = {};
+        filteredTime.forEach(row => {
+            const keys = Object.keys(row);
+            const date = row[keys[0]];
+            const time = row[keys[1]];
+            const action = row[keys[2]];
+            
+            if(!walkSessions[date]) walkSessions[date] = { duration: 0, start: null };
+            
+            if(action && action.includes('開始')) {
+                walkSessions[date].start = time;
+            }
+            if(action && action.includes('結束') && walkSessions[date].start) {
+                const startTime = new Date(`1970/01/01 ${walkSessions[date].start}`);
+                const endTime = new Date(`1970/01/01 ${time}`);
+                walkSessions[date].duration += Math.round((endTime - startTime) / 60000);
+                walkSessions[date].start = null; // 重置以防同一天有多次散步
+            }
+        });
+
+        let totalWalkTime = 0;
+        let walkDaysCount = 0;
+        Object.values(walkSessions).forEach(session => {
+            if(session.duration > 0) {
+                totalWalkTime += session.duration;
+                walkDaysCount++;
+            }
+        });
+
+        const avgWalk = walkDaysCount > 0 ? Math.round(totalWalkTime / walkDaysCount) : 0;
+        document.getElementById('avg-walk-time').innerText = avgWalk;
+
+        // 繪製橫向長條圖
+        const ctx = document.getElementById('walkChart').getContext('2d');
+        if (walkChartInstance) walkChartInstance.destroy();
+
+        walkChartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: Object.keys(groundCounts).length > 0 ? Object.keys(groundCounts) : ['無資料'],
+                datasets: [{
+                    label: '次數',
+                    data: Object.keys(groundCounts).length > 0 ? Object.values(groundCounts) : [0],
+                    backgroundColor: chartColors[0],
+                    borderRadius: 5
+                }]
+            },
+            options: {
+                indexAxis: 'y', // 打橫
+                responsive: true,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: { beginAtZero: true, ticks: { stepSize: 1, font: {size: 10} } },
+                    y: { ticks: { font: {size: 10} } }
+                }
+            }
+        });
+    }
+
+    // 啟動程式
+    window.onload = init;
+</script>
+
+</body>
+</html>
